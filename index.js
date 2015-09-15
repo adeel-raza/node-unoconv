@@ -5,6 +5,7 @@ var _ = require('underscore'),
     mime = require('mime');
 
 var unoconv = exports = module.exports = {};
+var fs = require('fs');
 
 /**
 * Convert a document.
@@ -15,10 +16,10 @@ var unoconv = exports = module.exports = {};
 * @param {Function} callback
 * @api public
 */
-unoconv.convert = function(file, outputFormat, options, callback) {
+unoconv.convert = function(libreOfficePath,file, outputFormat, options, callback) {
     var self = this,
         args,
-        bin = 'unoconv',
+        bin = "python",
         child,
         stdout = [],
         stderr = [];
@@ -29,30 +30,25 @@ unoconv.convert = function(file, outputFormat, options, callback) {
     }
 
     args = [
-        '-f' + outputFormat,
-        '--stdout'
+        'unoconv.py',
+        '-f' +outputFormat
     ];
 
     if (options && options.port) {
         args.push('-p' + options.port)
     }
 
-    args.push(file);
+    args.push('  "'+file+'"');
 
     if (options && options.bin) {
         bin = options.bin;
     }
 
-    child = childProcess.spawn(bin, args, function (err, stdout, stderr) {
-        if (err) {
-            return callback(err);
-        }
+    child = childProcess.spawn(bin,args,{cwd : libreOfficePath,windowsVerbatimArguments: true });
 
-        if (stderr) {
-            return callback(new Error(stderr.toString()));
-        }
-
-        callback(null, stdout);
+    child.on('error', function (err) {
+        console.log(err + ' : Failed to start child process.');
+        callback(null,"Unable to convert doc: " + err);
     });
 
     child.stdout.on('data', function (data) {
@@ -63,12 +59,8 @@ unoconv.convert = function(file, outputFormat, options, callback) {
         stderr.push(data);
     });
 
-    child.on('exit', function () {
-        if (stderr.length) {
-            return callback(new Error(Buffer.concat(stderr).toString()));
-        }
-
-        callback(null, Buffer.concat(stdout));
+    child.on('close', function (code) {
+        callback(null, stdout.toString());
     });
 };
 
