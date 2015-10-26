@@ -46,10 +46,7 @@ unoconv.convert = function(libreOfficePath,file, outputFormat, options, callback
 
     child = childProcess.spawn(bin,args,{cwd : libreOfficePath,windowsVerbatimArguments: true });
 
-    child.on('error', function (err) {
-        console.log(err + ' : Failed to start child process.');
-        callback(null,"Unable to convert doc: " + err);
-    });
+    child.on('error', callback);
 
     child.stdout.on('data', function (data) {
         stdout.push(data);
